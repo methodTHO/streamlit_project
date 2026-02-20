@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Robot Tour Streamlit App",
+			"type": "shell",
+			"command": "/usr/local/bin/python3 -m streamlit run app.py",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}
