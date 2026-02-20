@@ -1,5 +1,2 @@
 streamlit
 plotly
-math
-time
-streamlit_plotly_events
