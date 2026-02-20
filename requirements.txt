@@ -1,0 +1,6 @@
+streamlit
+plotly.graph_objects
+streamlit.components.v1
+math
+time
+streamlit_plotly_events
