@@ -498,6 +498,41 @@ st.markdown("""<style>
 
 </style>""", unsafe_allow_html=True)
 
+components.html("""
+<script>
+(function() {
+    function _beep() {
+        try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+        } catch(e) {}
+    }
+    function _attach() {
+        var doc = window.parent.document;
+        doc.querySelectorAll('button').forEach(function(btn) {
+            if (!btn._beepAttached) {
+                btn._beepAttached = true;
+                btn.addEventListener('click', _beep);
+            }
+        });
+    }
+    // Attach now and re-attach whenever Streamlit re-renders
+    _attach();
+    new MutationObserver(_attach).observe(
+        window.parent.document.body, {childList: true, subtree: true}
+    );
+})();
+</script>
+""", height=0)
+
 st.markdown('## Robot Tour')
 
 def build_animation_figure(bcd, gcd, ocd):
