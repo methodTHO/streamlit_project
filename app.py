@@ -355,7 +355,8 @@ def build_figure(bcd, gcd, ocd):
 
 
     fig.update_layout(
-        height=750,
+        height=700,
+        autosize=True,
         margin=dict(l=10, r=10, t=10, b=10),
         plot_bgcolor='#f5f0e8',
         paper_bgcolor='white',
@@ -676,7 +677,7 @@ def render_chart():
     else:
         _click_ver = ''
     chart_key = f'chart_{mode}_{_click_ver}_{st.session_state.mode_change_count}'
-    clicked = plotly_events(fig, click_event=True, key=chart_key, override_height=775)
+    clicked = plotly_events(fig, click_event=True, key=chart_key, override_height=900)
 
     if clicked:
         pt = clicked[0]
@@ -768,6 +769,53 @@ def _to_roman(n):
             n -= v
     return result
 
+_RESPONSIVE_JS = """
+<script>
+(function() {
+    function resizeGrid() {
+        var P = window.parent;
+        if (!P) return;
+        var vh = P.innerHeight;
+        var vw = P.innerWidth;
+        // target 82% of viewport height, clamped between 420 and 1200 px
+        var targetH = Math.max(420, Math.min(1200, Math.floor(vh * 0.82)));
+
+        // 1. Resize the plotly_events component iframe
+        var compFrames = P.document.querySelectorAll(
+            '[data-testid="stCustomComponentV1"] iframe');
+        for (var i = 0; i < compFrames.length; i++) {
+            var f = compFrames[i];
+            f.height = targetH;
+            f.style.height = targetH + 'px';
+            try {
+                var pd = f.contentDocument &&
+                         f.contentDocument.querySelector('.js-plotly-plot');
+                if (pd && f.contentWindow && f.contentWindow.Plotly) {
+                    f.contentWindow.Plotly.relayout(pd, {height: targetH - 10});
+                }
+            } catch(e) {}
+        }
+
+        // 2. Resize static plotly charts (animation mode)
+        var mainPlots = P.document.querySelectorAll(
+            '[data-testid="stPlotlyChart"] .js-plotly-plot');
+        for (var i = 0; i < mainPlots.length; i++) {
+            try { P.Plotly.relayout(mainPlots[i], {height: targetH}); }
+            catch(e) {}
+        }
+    }
+
+    // Run immediately and also after DOM settles
+    setTimeout(resizeGrid, 300);
+    setTimeout(resizeGrid, 800);
+
+    // Re-run on every window resize
+    P.removeEventListener('resize', resizeGrid);
+    P.addEventListener('resize', resizeGrid);
+})();
+</script>
+"""
+
 col_grid, col_wp = st.columns([3, 1])
 with col_grid:
     if st.session_state.animate_robot:
@@ -790,8 +838,10 @@ with col_grid:
         setTimeout(tryPlay, 800);
         </script>
         """, height=0)
+        components.html(_RESPONSIVE_JS, height=0)
     else:
         render_chart()
+        components.html(_RESPONSIVE_JS, height=0)
 with col_wp:
     # Waypoints
     n_wp = len(st.session_state.route_points)
