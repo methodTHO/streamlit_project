@@ -186,7 +186,7 @@ def build_figure(bcd, gcd, ocd):
             x=[sx_t], y=[sy_t], mode='markers+text',
             marker=dict(symbol=_arrow_symbol, size=30, color='#00cc44',
                         line=dict(color='white', width=2)),
-            text=['(0,0)'],
+            text=['(0.0,0.0)'],
             textposition=_textpos,
             textfont=dict(size=16, color='#00cc44', family='monospace'),
             showlegend=False, hoverinfo='skip',
@@ -335,7 +335,7 @@ def build_figure(bcd, gcd, ocd):
         if sp:
             sx, sy, _ = sp
             def _fmt(v):
-                return str(int(v)) if v == int(v) else f'{v:.1f}'
+                return f'{float(v):.1f}'
             dx, dy = tx - sx, ty - sy
             rdx, rdy = _rotate_vector(dx, dy, rot)
             target_label = f'({_fmt(rdx)},{_fmt(rdy)})'
@@ -413,19 +413,19 @@ with st.sidebar:
         st.session_state.animate_robot = False
         st.rerun()
     st.divider()
-    if st.button('Undo Move', use_container_width=True):
+    if st.button('Undo Move', width='stretch'):
         if st.session_state.route_points:
             st.session_state.route_points.pop()
             st.session_state.route_click_count += 1
             st.rerun()
-    if st.button('Clear Route', use_container_width=True):
+    if st.button('Clear Route', width='stretch'):
         st.session_state.route_points = []
         st.session_state.route_click_count += 1
         st.rerun()
-    if st.button('Verify Route On/Off', use_container_width=True):
+    if st.button('Verify Route On/Off', width='stretch'):
         st.session_state.animate_robot = not st.session_state.animate_robot
         st.rerun()
-    if st.button('Reset', use_container_width=True):
+    if st.button('Reset', width='stretch'):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -820,7 +820,7 @@ col_grid, col_wp = st.columns([3, 1])
 with col_grid:
     if st.session_state.animate_robot:
         anim_fig = build_animation_figure(bcd, gcd, ocd)
-        st.plotly_chart(anim_fig, use_container_width=True)
+        st.plotly_chart(anim_fig, width='stretch')
         components.html("""
         <script>
         function tryPlay() {
@@ -933,7 +933,7 @@ with col_wp:
                 prev_x, prev_y = rp[0], rp[1]
                 linear_roman = _to_roman(math.ceil(dist))
             else:
-                coord = f'({rp[0]}, {rp[1]})'
+                coord = f'({float(rp[0]):.1f}, {float(rp[1]):.1f})'
                 dist, dist_str, turn_str, abs_turn = 0.0, '?', '', 0.0
                 linear_roman = ''
             wp_data.append(dict(coord=coord, dist=dist, dist_str=dist_str,
@@ -1021,8 +1021,8 @@ if n_wp > 0:
         lin_t = _linear_time_map.get(linear_roman, 0.0)
         code_lines.append(f'// Waypoint {i + 1}')
         code_lines.append(f'{fn}(Waypoint {{')
-        code_lines.append(f'    x: {cx_val},')
-        code_lines.append(f'    y: {cy_val},')
+        code_lines.append(f'    x: {cx_val:.1f},')
+        code_lines.append(f'    y: {cy_val:.1f},')
         code_lines.append(f'    time_linear: {linear_roman},  // {lin_t:.2f}s')
         code_lines.append(f'    time_angular: {angular_roman},  // {ang_t:.2f}s')
         code_lines.append(f'}}),' )
