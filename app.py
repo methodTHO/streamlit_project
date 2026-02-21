@@ -396,7 +396,7 @@ for r in range(1, ROWS):
     for c in range(COLS):
         ocd.append([c + 0.5, r, 'h', r, c])
 
-MODES = ['Starting Point', 'Target Point', 'Gates', 'Obstacles', 'Bottles', 'Move Forward', 'Move Backward', 'Move to Gate']
+MODES = ['Starting Point', 'Target Point', 'Obstacles', 'Bottles', 'Gates', 'Move Forward', 'Move to Gate', 'Move Backward']
 
 # Sidebar
 with st.sidebar:
@@ -448,6 +448,39 @@ with st.sidebar:
 
 st.markdown("""<style>
     .block-container { padding-top: 2rem !important; }
+    /* Compact number inputs globally in the time-settings area */
+    div[data-testid="stNumberInput"] {
+        margin-bottom: -1.1rem !important;
+    }
+    div[data-testid="stNumberInput"] label {
+        font-size: 0.78em !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    div[data-testid="stNumberInput"] input {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        font-size: 0.85em !important;
+    }
+    /* Make target time text input mimic the number‑input square size */
+    div[data-testid="stTextInput"] {
+        width: 70px !important;
+        min-width: 70px !important;
+        margin-bottom: 0.2rem !important;  /* keep it tight under its label */
+    }
+    div[data-testid="stTextInput"] input {
+        padding: 4px 6px !important;
+        font-size: 0.9em !important;
+        width: 100% !important;
+        height: 2.2rem !important;
+        box-sizing: border-box !important;
+    }
+    /* Tighten the "Angular / Linear time values" headings */
+    div[data-testid="stMarkdown"] p {
+        margin-top: 4px !important;
+        margin-bottom: 0px !important;
+    }
+
 </style>""", unsafe_allow_html=True)
 
 st.markdown('## Robot Tour')
@@ -722,6 +755,19 @@ def render_chart():
                 st.session_state.target_point = new_tp
                 st.rerun()
 
+def _to_roman(n):
+    """Convert a positive integer to a Roman numeral string; returns '' for 0."""
+    if n <= 0:
+        return ''
+    vals = [(1000,'M'),(900,'CM'),(500,'D'),(400,'CD'),(100,'C'),(90,'XC'),
+            (50,'L'),(40,'XL'),(10,'X'),(9,'IX'),(5,'V'),(4,'IV'),(1,'I')]
+    result = ''
+    for v, s in vals:
+        while n >= v:
+            result += s
+            n -= v
+    return result
+
 col_grid, col_wp = st.columns([3, 1])
 with col_grid:
     if st.session_state.animate_robot:
@@ -749,9 +795,40 @@ with col_grid:
 with col_wp:
     # Waypoints
     n_wp = len(st.session_state.route_points)
-    st.markdown(f'#### Waypoints [{n_wp}]')
-    total_time = st.number_input('Total time (s)', min_value=1, max_value=600, value=60, step=1)
+    _tt_raw = st.text_input('Target time', value=str(st.session_state.get('_tt_val', '60')), key='_tt_str')
+    try:
+        total_time = max(1, int(float(_tt_raw)))
+    except (ValueError, TypeError):
+        total_time = 60
+    st.session_state['_tt_val'] = str(total_time)
+    st.markdown('**Angular times:**')
+    _ac1, _ac2, _ac3 = st.columns(3)
+    with _ac1:
+        a_time   = st.number_input('A',   min_value=0.0, max_value=60.0, value=0.25, step=0.1, format='%.2f', key='a_time')
+    with _ac2:
+        ai_time  = st.number_input('AI',  min_value=0.0, max_value=60.0, value=0.5,  step=0.1, format='%.2f', key='ai_time')
+    with _ac3:
+        aii_time = st.number_input('AII', min_value=0.0, max_value=60.0, value=0.75, step=0.1, format='%.2f', key='aii_time')
+    _angular_time_map = {'': a_time, 'I': ai_time, 'II': aii_time}
+    st.markdown('**Linear times:**')
+    _lc1, _lc2, _lc3 = st.columns(3)
+    with _lc1:
+        li_time   = st.number_input('I',   min_value=0.0, max_value=60.0, value=1.0,  step=0.1, format='%.2f', key='li_time')
+        liv_time  = st.number_input('IV',  min_value=0.0, max_value=60.0, value=1.75, step=0.1, format='%.2f', key='liv_time')
+    with _lc2:
+        lii_time  = st.number_input('II',  min_value=0.0, max_value=60.0, value=1.25, step=0.1, format='%.2f', key='lii_time')
+        lv_time   = st.number_input('V',   min_value=0.0, max_value=60.0, value=2.0,  step=0.1, format='%.2f', key='lv_time')
+    with _lc3:
+        liii_time = st.number_input('III', min_value=0.0, max_value=60.0, value=1.5,  step=0.1, format='%.2f', key='liii_time')
+    _linear_time_map = {'I': li_time, 'II': lii_time, 'III': liii_time, 'IV': liv_time, 'V': lv_time}
     if n_wp == 0:
+        st.markdown('')
+        st.markdown(
+            f'#### Waypoints '
+            f'<span style="font-size:0.6em;font-weight:normal;color:white">'
+            f'[WP={n_wp}]</span>',
+            unsafe_allow_html=True
+        )
         st.caption('None yet.')
     else:
         rot = _rotation_for_start()
@@ -777,8 +854,20 @@ with col_wp:
                 dist_str = str(int(dist)) if dist == int(dist) else f'{dist:.2f}'
                 seg_rdx, seg_rdy = _rotate_vector(seg_dx, seg_dy, rot)
                 if wp_type == 'B':
-                    turn_str = '0° S'
-                    abs_turn = 0.0
+                    # Turn is measured from where the robot's back was pointing to the travel direction
+                    if abs(seg_rdx) > 1e-9 or abs(seg_rdy) > 1e-9:
+                        curr_angle = math.degrees(math.atan2(seg_rdy, seg_rdx))
+                        prev_angle = math.degrees(math.atan2(-prev_rdy, -prev_rdx))  # back of robot
+                        turn = -((curr_angle - prev_angle + 180) % 360 - 180)
+                        t = round(turn)
+                        dir_label = 'S' if t == 0 else ('R' if t > 0 else 'L')
+                        turn_str = f'{t}° {dir_label}'
+                        abs_turn = abs(t)
+                        # After backing, nose faces opposite to travel direction
+                        prev_rdx, prev_rdy = -seg_rdx, -seg_rdy
+                    else:
+                        turn_str = '0° S'
+                        abs_turn = 0.0
                 elif abs(seg_rdx) > 1e-9 or abs(seg_rdy) > 1e-9:
                     curr_angle = math.degrees(math.atan2(seg_rdy, seg_rdx))
                     prev_angle = math.degrees(math.atan2(prev_rdy, prev_rdx))
@@ -786,46 +875,106 @@ with col_wp:
                     t = round(turn)
                     dir_label = 'S' if t == 0 else ('R' if t > 0 else 'L')
                     turn_str = f'{t}° {dir_label}'
-                    abs_turn = abs(turn)
+                    abs_turn = abs(t)
                     prev_rdx, prev_rdy = seg_rdx, seg_rdy
                 else:
                     turn_str = '—'
                     abs_turn = 0.0
                 prev_x, prev_y = rp[0], rp[1]
+                linear_roman = _to_roman(math.ceil(dist))
             else:
                 coord = f'({rp[0]}, {rp[1]})'
                 dist, dist_str, turn_str, abs_turn = 0.0, '?', '', 0.0
+                linear_roman = ''
             wp_data.append(dict(coord=coord, dist=dist, dist_str=dist_str,
-                                abs_turn=abs_turn, turn_str=turn_str, wp_type=wp_type))
+                                abs_turn=abs_turn, turn_str=turn_str, wp_type=wp_type,
+                                linear_roman=linear_roman))
 
-        # --- Time allocation: weight = distance + turn_penalty ---
-        # Each 90° of turn is treated as equivalent to 1 extra square
-        weights = [d['dist'] + d['abs_turn'] / 90.0 for d in wp_data]
-        total_weight = sum(weights) or 1.0
-        alloc_times = [w / total_weight * total_time for w in weights]
+        # --- Turn direction counts ---
+        fl = sum(1 for d in wp_data if d['wp_type'] in ('F', 'G') and d['turn_str'].endswith('L'))
+        fr = sum(1 for d in wp_data if d['wp_type'] in ('F', 'G') and d['turn_str'].endswith('R'))
+        br = sum(1 for d in wp_data if d['wp_type'] == 'B' and d['turn_str'].endswith('R'))
+        bl = sum(1 for d in wp_data if d['wp_type'] == 'B' and d['turn_str'].endswith('L'))
+        total_l = fl + br
+        total_r = fr + bl
+        st.markdown('')
+        st.markdown(
+            f'#### Waypoints '
+            f'<span style="font-size:0.6em;font-weight:normal;color:white">'
+            f'[WP={n_wp} &nbsp; L={total_l} &nbsp; R={total_r}]</span>',
+            unsafe_allow_html=True
+        )
 
-        # Cumulative timestamps so last waypoint = exactly total_time
+        # --- Time allocation: angular time + linear time per waypoint ---
+        # (computed here so Total/Diff can be shown right under the heading)
+        alloc_times = []
+        for d in wp_data:
+            ar_suffix = _to_roman(math.ceil(d['abs_turn'] / 90.0))
+            lin_t = _linear_time_map.get(d['linear_roman'], 0.0)
+            ang_t = _angular_time_map.get(ar_suffix, 0.0)
+            alloc_times.append(ang_t + lin_t)
+
+        # Cumulative timestamps
         cumulative = []
         running = 0.0
-        for i, alloc in enumerate(alloc_times):
+        for alloc in alloc_times:
             running += alloc
-            # Force last waypoint to exact total_time to avoid float drift
-            cumulative.append(total_time if i == len(alloc_times) - 1 else running)
+            cumulative.append(running)
+
+        # --- Total / Target / Difference shown right under heading ---
+        total_alloc = sum(alloc_times)
+        diff = total_alloc - total_time
+        diff_sign = '+' if diff >= 0 else ''
+        diff_color = '#cc3300' if diff > 0 else ('#00aa44' if diff < 0 else '#888')
+        st.markdown(
+            f'<div style="font-size:1.0em">'
+            f'<b>Total: {total_alloc:.2f}s</b>'
+            f'&nbsp;&nbsp;<span style="font-weight:normal;color:#888">Target: {total_time}s</span>'
+            f'<br><span style="color:{diff_color}">Difference: {diff_sign}{diff:.2f}s</span>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
         # --- Render lines ---
         lines = []
         for i, (d, seg_t, cum_t) in enumerate(zip(wp_data, alloc_times, cumulative)):
-            seg_str = f'{seg_t:.1f}s'
-            cum_str = f'{cum_t:.1f}s'
-            meta = f'{d["turn_str"]} / {d["dist_str"]}sq / {seg_str} (@ {cum_str})'
+            seg_str = f'{seg_t:.2f}s'
+            cum_str = f'{cum_t:.2f}s'
+            lr = f' ({d["linear_roman"]})' if d['linear_roman'] else ''
+            ar_val = _to_roman(math.ceil(d['abs_turn'] / 90.0))
+            ar = f' (A{ar_val})'
+            move_info = f'{d["turn_str"]}{ar} / {d["dist_str"]}sq{lr}'
+            time_info = f'<span style="font-size:0.8em;color:#888">{seg_str} (@ {cum_str})</span>'
             if d['wp_type'] == 'B':
-                lines.append(f'{i + 1}. <b><span style="color:red">B</span></b> {d["coord"]} / {meta}')
+                lines.append(f'{i + 1}. <b><span style="color:red">B</span></b> {d["coord"]} / {move_info}<br>&nbsp;&nbsp;&nbsp;&nbsp;{time_info}')
             elif d['wp_type'] == 'G':
-                lines.append(f'{i + 1}. <span style="color:#20B2AA">G</span> {d["coord"]} / {meta}')
+                lines.append(f'{i + 1}. <span style="color:#20B2AA">G</span> {d["coord"]} / {move_info}<br>&nbsp;&nbsp;&nbsp;&nbsp;{time_info}')
             else:
-                lines.append(f'{i + 1}. {d["coord"]} / {meta}')
-        lines.append(f'<b>Total: {total_time:.1f}s</b>')
-        st.markdown('<div style="font-size:1.4em">' + '<br>'.join(lines) + '</div>', unsafe_allow_html=True)
+                lines.append(f'{i + 1}. {d["coord"]} / {move_info}<br>&nbsp;&nbsp;&nbsp;&nbsp;{time_info}')
+        st.markdown('<div style="font-size:1.0em;">' + '<br>'.join(lines) + '</div>', unsafe_allow_html=True)
+
+# Generated code block — shown below the grid when waypoints exist
+if n_wp > 0:
+    st.divider()
+    st.markdown('**Generated Code**')
+    code_lines = []
+    for i, (d, seg_t) in enumerate(zip(wp_data, alloc_times)):
+        fn = 'Backout' if d['wp_type'] == 'B' else 'GoTo'
+        coord_str = d['coord'].strip('()')
+        cx_str, cy_str = [s.strip() for s in coord_str.split(',')]
+        linear_roman = d['linear_roman']
+        ar_suffix = _to_roman(math.ceil(d['abs_turn'] / 90.0))
+        angular_roman = 'A' + ar_suffix
+        ang_t = _angular_time_map.get(ar_suffix, 0.0)
+        lin_t = _linear_time_map.get(linear_roman, 0.0)
+        code_lines.append(f'// Waypoint {i + 1}')
+        code_lines.append(f'{fn}(Waypoint {{')
+        code_lines.append(f'    x: {cx_str},')
+        code_lines.append(f'    y: {cy_str},')
+        code_lines.append(f'    time_linear: {linear_roman},  // {lin_t:.2f}s')
+        code_lines.append(f'    time_angular: {angular_roman},  // {ang_t:.2f}s')
+        code_lines.append(f'}}),' )
+    st.code('\n'.join(code_lines), language='rust')
 
 # Arrow shown first; rotate after a brief pause so the user sees the placement
 if not st.session_state.get('rotation_ready', True):
