@@ -896,7 +896,7 @@ with col_wp:
                 dx, dy = rp[0] - sx, rp[1] - sy
                 rdx, rdy = _rotate_vector(dx, dy, rot)
                 def _fmt(v):
-                    return str(int(v)) if v == int(v) else f'{v:.1f}'
+                    return f'{float(v):.1f}'
                 coord = f'({_fmt(rdx)}, {_fmt(rdy)})'
                 seg_dx = rp[0] - prev_x
                 seg_dy = rp[1] - prev_y
@@ -1012,6 +1012,8 @@ if n_wp > 0:
         fn = 'Backout' if d['wp_type'] == 'B' else 'GoTo'
         coord_str = d['coord'].strip('()')
         cx_str, cy_str = [s.strip() for s in coord_str.split(',')]
+        cx_val = float(cx_str)
+        cy_val = float(cy_str)
         linear_roman = d['linear_roman']
         ar_suffix = _to_roman(math.ceil(d['abs_turn'] / 90.0))
         angular_roman = 'A' + ar_suffix
@@ -1019,8 +1021,8 @@ if n_wp > 0:
         lin_t = _linear_time_map.get(linear_roman, 0.0)
         code_lines.append(f'// Waypoint {i + 1}')
         code_lines.append(f'{fn}(Waypoint {{')
-        code_lines.append(f'    x: {cx_str},')
-        code_lines.append(f'    y: {cy_str},')
+        code_lines.append(f'    x: {cx_val},')
+        code_lines.append(f'    y: {cy_val},')
         code_lines.append(f'    time_linear: {linear_roman},  // {lin_t:.2f}s')
         code_lines.append(f'    time_angular: {angular_roman},  // {ang_t:.2f}s')
         code_lines.append(f'}}),' )
