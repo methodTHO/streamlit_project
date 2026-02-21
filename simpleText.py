@@ -43,6 +43,8 @@ if 'track_orientation' not in st.session_state:
     st.session_state.track_orientation = '4x5'
 if 'man_type_gen' not in st.session_state:
     st.session_state.man_type_gen = 0
+if 'editing_wp_idx' not in st.session_state:
+    st.session_state.editing_wp_idx = None
 
 COLS, ROWS = (4, 5) if st.session_state.track_orientation == '4x5' else (5, 4)
 
@@ -878,7 +880,9 @@ with col_grid:
         st.divider()
         # --- Manual waypoint input ---
         st.markdown(f'### Manual Waypoint Input &nbsp; <span style="font-size:0.65em;font-weight:normal;color:#888">({_orient} &nbsp; X={_x_labels[0]}–{_x_labels[-1]}, Y=1–{len(_y_labels)})</span>', unsafe_allow_html=True)
-        _mc1, _mc2, _mc3, _mc4, _mc5 = st.columns([1, 1, 1.5, 1, 1])
+        _mc0, _mc1, _mc2, _mc3, _mc4, _mc5 = st.columns([0.4, 1, 1, 1.5, 1, 1])
+        with _mc0:
+            st.markdown(f'<div style="height:1.9em"></div><b style="font-size:1.1em">#{len(st.session_state.route_points) + 1}</b>', unsafe_allow_html=True)
         with _mc1:
             _sel_x = st.selectbox('X', _x_labels, key='man_x')
         with _mc2:
@@ -915,18 +919,59 @@ with col_grid:
         # Show current waypoints as a simple table
         if st.session_state.route_points:
             st.markdown('**Current waypoints:**')
-            _rows = []
             for _i, _rp in enumerate(st.session_state.route_points):
                 _rx, _ry = _rp[0], _rp[1]
                 _rt = _rp[2] if len(_rp) > 2 else 'F'
-                # Reverse-map internal coord to label
-                _xi = int(_rx - 0.5)
-                _yi = int(_ry - 0.5)
+                _xi = round(_rx - 0.5)
+                _yi = round(_ry - 0.5)
                 _xlbl = _x_labels[_xi] if 0 <= _xi < len(_x_labels) else f'{_rx:.1f}'
                 _ylbl = _y_labels[_yi] if 0 <= _yi < len(_y_labels) else f'{_ry:.1f}'
                 _type_name = {'F': 'Forward', 'B': 'Backward', 'G': 'Gate'}.get(_rt, _rt)
-                _rows.append(f'{_i + 1}. **{_xlbl},{_ylbl}** — {_type_name}')
-            st.markdown('\n'.join(_rows))
+                if st.session_state.editing_wp_idx == _i:
+                    _ea, _eb, _ec, _ed, _ee = st.columns([1, 1, 1.5, 1, 1])
+                    with _ea:
+                        _ex_idx = _x_labels.index(_xlbl) if _xlbl in _x_labels else 0
+                        _edit_x = st.selectbox('X', _x_labels, index=_ex_idx, key=f'edit_x_{_i}')
+                    with _eb:
+                        _ey_idx = _y_labels.index(_ylbl) if _ylbl in _y_labels else 0
+                        _edit_y = st.selectbox('Y', _y_labels, index=_ey_idx, key=f'edit_y_{_i}')
+                    with _ec:
+                        _et_idx = ['Forward', 'Backward', 'Gate'].index(_type_name)
+                        _edit_type = st.selectbox('Type', ['Forward', 'Backward', 'Gate'], index=_et_idx, key=f'edit_type_{_i}')
+                    with _ed:
+                        st.markdown('<div style="height:1.9em"></div>', unsafe_allow_html=True)
+                        if st.button('Save', key=f'edit_save_{_i}'):
+                            _new_x, _new_y = _label_to_coord(_edit_x, _edit_y)
+                            _new_t = {'Forward': 'F', 'Backward': 'B', 'Gate': 'G'}[_edit_type]
+                            if _new_t == 'G':
+                                _prev = st.session_state.route_points[_i - 1][:2] if _i > 0 else \
+                                        (st.session_state.start_point[:2] if st.session_state.start_point else None)
+                                if _prev:
+                                    _ddx, _ddy = _new_x - _prev[0], _new_y - _prev[1]
+                                    if abs(_ddx) >= abs(_ddy) and _ddx != 0:
+                                        _ndx, _ndy = (1 if _ddx > 0 else -1), 0
+                                    elif _ddy != 0:
+                                        _ndx, _ndy = 0, (1 if _ddy > 0 else -1)
+                                    else:
+                                        _ndx, _ndy = 0, 0
+                                    _new_x, _new_y = _new_x - 0.2 * _ndx, _new_y - 0.2 * _ndy
+                            st.session_state.route_points[_i] = [_new_x, _new_y, _new_t]
+                            st.session_state.route_click_count += 1
+                            st.session_state.editing_wp_idx = None
+                            st.rerun()
+                    with _ee:
+                        st.markdown('<div style="height:1.9em"></div>', unsafe_allow_html=True)
+                        if st.button('Cancel', key=f'edit_cancel_{_i}'):
+                            st.session_state.editing_wp_idx = None
+                            st.rerun()
+                else:
+                    _ra, _rb = st.columns([4, 1])
+                    with _ra:
+                        st.markdown(f'{_i + 1}. **{_xlbl},{_ylbl}** \u2014 {_type_name}')
+                    with _rb:
+                        if st.button('Edit', key=f'wp_edit_{_i}'):
+                            st.session_state.editing_wp_idx = _i
+                            st.rerun()
         else:
             st.caption('No waypoints yet.')
     elif st.session_state.animate_robot:
