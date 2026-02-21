@@ -1047,20 +1047,20 @@ with col_wp:
     with _ac1:
         a_time   = st.number_input('A',   min_value=0.0, max_value=60.0, value=0.25, step=0.1, format='%.2f', key='a_time')
     with _ac2:
-        ai_time  = st.number_input('AI',  min_value=0.0, max_value=60.0, value=0.5,  step=0.1, format='%.2f', key='ai_time')
+        ai_time  = st.number_input('AI',  min_value=0.0, max_value=60.0, value=1.0,  step=0.1, format='%.2f', key='ai_time')
     with _ac3:
-        aii_time = st.number_input('AII', min_value=0.0, max_value=60.0, value=0.75, step=0.1, format='%.2f', key='aii_time')
+        aii_time = st.number_input('AII', min_value=0.0, max_value=60.0, value=1.50, step=0.1, format='%.2f', key='aii_time')
     _angular_time_map = {'': a_time, 'I': ai_time, 'II': aii_time}
     st.markdown('**Linear times:**')
     _lc1, _lc2, _lc3 = st.columns(3)
     with _lc1:
-        li_time   = st.number_input('I',   min_value=0.0, max_value=60.0, value=1.0,  step=0.1, format='%.2f', key='li_time')
-        liv_time  = st.number_input('IV',  min_value=0.0, max_value=60.0, value=1.75, step=0.1, format='%.2f', key='liv_time')
+        li_time   = st.number_input('I',   min_value=0.0, max_value=60.0, value=2.0,  step=0.1, format='%.2f', key='li_time')
+        liv_time  = st.number_input('IV',  min_value=0.0, max_value=60.0, value=4.0, step=0.1, format='%.2f', key='liv_time')
     with _lc2:
-        lii_time  = st.number_input('II',  min_value=0.0, max_value=60.0, value=1.25, step=0.1, format='%.2f', key='lii_time')
-        lv_time   = st.number_input('V',   min_value=0.0, max_value=60.0, value=2.0,  step=0.1, format='%.2f', key='lv_time')
+        lii_time  = st.number_input('II',  min_value=0.0, max_value=60.0, value=2.0, step=0.1, format='%.2f', key='lii_time')
+        lv_time   = st.number_input('V',   min_value=0.0, max_value=60.0, value=5.0,  step=0.1, format='%.2f', key='lv_time')
     with _lc3:
-        liii_time = st.number_input('III', min_value=0.0, max_value=60.0, value=1.5,  step=0.1, format='%.2f', key='liii_time')
+        liii_time = st.number_input('III', min_value=0.0, max_value=60.0, value=3.0,  step=0.1, format='%.2f', key='liii_time')
     _linear_time_map = {'I': li_time, 'II': lii_time, 'III': liii_time, 'IV': liv_time, 'V': lv_time}
     if n_wp == 0:
         st.markdown('')
