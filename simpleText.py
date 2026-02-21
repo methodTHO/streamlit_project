@@ -408,7 +408,7 @@ MODES = ['Starting Point', 'Target Point', 'Obstacles', 'Bottles', 'Gates', 'Mov
 
 # Sidebar
 with st.sidebar:
-    grid_label = 'Hide Grid' if st.session_state.show_grid else 'Show Grid'
+    grid_label = 'Basic' if st.session_state.show_grid else 'Advanced'
     if st.button(grid_label, width='stretch'):
         st.session_state.show_grid = not st.session_state.show_grid
         st.rerun()
