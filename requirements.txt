@@ -1,3 +1,1 @@
-streamlit
-plotly
-streamlit_plotly_events
+streamlit>=1.28.0

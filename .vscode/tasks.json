@@ -7,6 +7,12 @@
 			"command": "/usr/local/bin/python3 -m streamlit run app.py",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "Run superSimple.py",
+			"type": "shell",
+			"command": "/usr/local/bin/python3 -m streamlit run superSimple.py",
+			"isBackground": true
 		}
 	]
 }
